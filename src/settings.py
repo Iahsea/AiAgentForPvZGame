@@ -1,14 +1,22 @@
 import os
 
 from llama_index.core import Settings
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.llms.openai import OpenAI
+from llama_index.embeddings.gemini import GeminiEmbedding
+from llama_index.llms.gemini import Gemini
 
 
 def init_settings():
-    if os.getenv("OPENAI_API_KEY") is None:
-        raise RuntimeError("OPENAI_API_KEY is missing in environment variables")
-    Settings.llm = OpenAI(model=os.getenv("MODEL") or "gpt-4.1")
-    Settings.embed_model = OpenAIEmbedding(
-        model=os.getenv("EMBEDDING_MODEL") or "text-embedding-3-large"
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GOOGLE_API_KEY is missing in environment variables")
+
+    # Sử dụng Gemini Flash Lite
+    Settings.llm = Gemini(
+        model=os.getenv("MODEL") or "models/gemini-3.1-flash-lite",
+        api_key=api_key,
+    )
+    # Sử dụng Embedding model của Google
+    Settings.embed_model = GeminiEmbedding(
+        model_name=os.getenv("EMBEDDING_MODEL") or "models/gemini-embedding-001",
+        api_key=api_key,
     )
