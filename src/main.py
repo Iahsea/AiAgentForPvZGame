@@ -10,6 +10,9 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi import Request
 from src.routers import router as advisor_router
 
 # ---------------------------------------------------------------------------
@@ -39,6 +42,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Bắt và in chi tiết lỗi validation cùng dữ liệu thô từ client Unity."""
+    raw_body = await request.body()
+    body_str = raw_body.decode("utf-8", errors="replace")
+    logger.error("❌ [422 Validation Error] Chi tiết lỗi: %s", exc.errors())
+    logger.error("📥 [Raw JSON từ Unity]: %s", body_str)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "raw_received": body_str},
+    )
+
+
 # Đăng ký Controller / Router
 app.include_router(advisor_router)
 
@@ -48,6 +65,7 @@ app.include_router(advisor_router)
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "src.main:app",
         host="0.0.0.0",
